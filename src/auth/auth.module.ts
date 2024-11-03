@@ -5,6 +5,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserRepository } from '../repositories/user.repository';
+import { APP_GUARD } from '@nestjs/core';
+import { AccessTokenGuard } from './guards/accessToken.guard';
+import { AccessTokenStrategy } from './strategies/accessToken.strategy';
+import { RefreshTokenStrategy } from './strategies/refreshToken.strategy';
 
 @Module({
   providers: [
@@ -13,7 +17,13 @@ import { UserRepository } from '../repositories/user.repository';
     PrismaService,
     UserService,
     JwtService,
-    UserRepository
+    UserRepository,
+    AccessTokenStrategy,
+    RefreshTokenStrategy,
+    {
+      provide: APP_GUARD,
+      useClass: AccessTokenGuard,
+    }
   ],
 })
 export class AuthModule {}

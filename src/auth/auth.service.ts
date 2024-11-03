@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { SignupInputDto } from './dto/signup-input.dto';
 import * as argon from 'argon2';
@@ -6,7 +6,6 @@ import { UserRepository } from '../repositories/user.repository';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { SignResponse } from './dto/sign-response.dto';
-import { User } from '@prisma/client';
 import { SignInInputDto } from './dto/signin-input.dto';
 
 @Injectable()
@@ -38,21 +37,16 @@ export class AuthService {
     return { accessToken, refreshToken, user };
   }
 
-  // findAll() {
-  //   return `This action returns all auth`;
-  // }
-  //
-  // findOne(id: number) {
-  //   return `This action returns a #${id} auth`;
-  // }
-  //
-  // update(id: number, updateAuthInput: UpdateAuthInput) {
-  //   return `This action updates a #${id} auth`;
-  // }
-  //
-  // remove(id: number) {
-  //   return `This action removes a #${id} auth`;
-  // }
+  async refreshTokens(userId: string, rt: string): Promise<Omit<SignResponse, 'user'>> {
+    const user = await this.userService.getUser(userId);
+    const isRefreshTokenMatch = await argon.verify(user.refreshToken, rt);
+    if (!isRefreshTokenMatch) {
+      throw new UnauthorizedException('Refresh token is invalid');
+    }
+    const { accessToken, refreshToken } = this.createTokens(user.id, user.email);
+    await this.updateRefreshToken(user.id, refreshToken);
+    return { accessToken, refreshToken };
+  }
 
   private createTokens(userId: string, email: string) {
     const accessToken = this.jwtService.sign({ userId, email }, {
@@ -66,7 +60,7 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private async updateRefreshToken(userId: string, refreshToken: string) {
+  private async updateRefreshToken(userId: string, refreshToken: string): Promise<void> {
     const hashedRefreshToken = await argon.hash(refreshToken);
     await this.userRepository.update(userId, { refreshToken: hashedRefreshToken });
   }
