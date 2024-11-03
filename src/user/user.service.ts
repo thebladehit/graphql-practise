@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateUserInput } from './dto/update-user.input';
 import { SignupInputDto } from '../auth/dto/signup-input.dto';
 import { UserRepository } from '../repositories/user.repository';
@@ -9,11 +9,19 @@ export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
 
   async create(signUpInput: SignupInputDto, hashedPassword: string): Promise<User> {
-    const user = await this.userRepository.findByEmail(signUpInput.email);
+    const user = await this.userRepository.findByEmailOrId(signUpInput.email);
     if (user) {
       throw new BadRequestException('User with such email is already exists');
     }
     return this.userRepository.create(signUpInput, hashedPassword);
+  }
+
+  async getUser(emailOrId: string): Promise<User> {
+    const user = await this.userRepository.findByEmailOrId(emailOrId);
+    if (!user) {
+      throw new NotFoundException('No user with such email');
+    }
+    return user;
   }
 
   findAll() {

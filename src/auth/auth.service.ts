@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { SignupInputDto } from './dto/signup-input.dto';
 import * as argon from 'argon2';
@@ -6,6 +6,8 @@ import { UserRepository } from '../repositories/user.repository';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { SignResponse } from './dto/sign-response.dto';
+import { User } from '@prisma/client';
+import { SignInInputDto } from './dto/signin-input.dto';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +22,17 @@ export class AuthService {
   async signUp(signUpInput: SignupInputDto): Promise<SignResponse> {
     const hashedPassword = await argon.hash(signUpInput.password);
     const user = await this.userService.create(signUpInput, hashedPassword);
+    const { accessToken, refreshToken } = this.createTokens(user.id, user.email);
+    await this.updateRefreshToken(user.id, refreshToken);
+    return { accessToken, refreshToken, user };
+  }
+
+  async signIn(signInInput: SignInInputDto): Promise<SignResponse> {
+    const user = await this.userService.getUser(signInInput.email);
+    const isPasswordMatch = await argon.verify(user.password, signInInput.password);
+    if (!isPasswordMatch) {
+      throw new UnauthorizedException('Incorrect password');
+    }
     const { accessToken, refreshToken } = this.createTokens(user.id, user.email);
     await this.updateRefreshToken(user.id, refreshToken);
     return { accessToken, refreshToken, user };

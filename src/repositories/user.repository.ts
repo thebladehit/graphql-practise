@@ -18,8 +18,15 @@ export class UserRepository {
     })
   }
 
-  findByEmail(email: string): Promise<User> {
-    return this.prisma.user.findUnique({ where: { email } });
+  findByEmailOrId(emailOrId: string): Promise<User> {
+    return this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: emailOrId },
+          { id: emailOrId },
+        ]
+      },
+    });
   }
 
   update(userId: string, data: Partial<User>): Promise<User> {
