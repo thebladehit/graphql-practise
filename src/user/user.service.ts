@@ -24,19 +24,11 @@ export class UserService {
     return user;
   }
 
-  findAll() {
-    return `This action returns all user`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
-
-  update(id: number, updateUserInput: UpdateUserInput) {
-    return `This action updates a #${id} user`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async update(userId: string, userUpdateDto: UpdateUserInput): Promise<User> {
+    const user = await this.userRepository.findByEmailOrId(userId);
+    if (!user) {
+      throw new NotFoundException('No user with such email or id');
+    }
+    return this.userRepository.update(userId, userUpdateDto);
   }
 }
